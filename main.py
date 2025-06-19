@@ -19,11 +19,11 @@ You are a helpful AI coding agent.
 When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
 
 - List files and directories
-- Read file contents
+- Read file contents  
 - Execute python files with optional arguments
 - Write or overwrite files
 
-All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+All paths you provide should be relative to the working directory. The calculator application files are located in the calculator directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
 """
 
 # Functions schema and listing of available functions for the AI Agent to use
@@ -107,32 +107,33 @@ messages = [
 ]
 
 # Get response
-response = client.models.generate_content(
-    model='gemini-2.0-flash-001',
-    contents=messages,
-    config=types.GenerateContentConfig(
-    tools=[available_functions], system_instruction=system_prompt
-)
-)
+for i in range(20):
+    response = client.models.generate_content(
+        model='gemini-2.0-flash-001',
+        contents=messages,
+        config=types.GenerateContentConfig(
+        tools=[available_functions], system_instruction=system_prompt
+    )
+    )
 
-if response.text is not None:
-    res_text = response.text
-else:
-    res_text = ""
+    for candidate in response.candidates:
+        messages.append(candidate.content)
 
-# Check for function calls
-if len(response.function_calls) > 0:
-    for call in response.function_calls:
-        function_call_result = call_function(call, args.verbose)
-        try:
-            if args.verbose:
-                print(f"-> {function_call_result.parts[0].function_response.response}")
-        except Exception as e:
-            raise Exception(f"Fatal Error: {str(e)}")
-
-# Check for --verbose
-if args.verbose:
-    print(f"{res_text}\nUser prompt: {args.prompt}\n Prompt tokens: {response.usage_metadata.prompt_token_count}\n Response tokens: {response.usage_metadata.candidates_token_count}")
-else:
-    print(res_text)
+    # Check for function calls
+    if response.function_calls :
+        for call in response.function_calls:
+            function_call_result = call_function(call, args.verbose)
+            messages.append(function_call_result)
+            try:
+                if args.verbose:
+                    print(f"-> {function_call_result.parts[0].function_response.response}")
+            except Exception as e:
+                raise Exception(f"Fatal Error: {str(e)}")
+    else:
+        if response.text is not None:
+            res_text = response.text
+        else:
+            res_text = ""
+        print(f"Final response: {res_text}")
+        break
 
