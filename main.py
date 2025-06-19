@@ -4,6 +4,7 @@ import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from functions.call_function import call_function
 
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -41,7 +42,7 @@ schema_get_files_info = types.FunctionDeclaration(
 )
 
 schema_get_file_content = types.FunctionDeclaration(
-    name="get_file_content",
+    name="get_file_contents",
     description="Reads and returns the content of the file on file_path, limited to 10000 characters. Also constrained to the working directory.",
     parameters=types.Schema(
         type=types.Type.OBJECT,
@@ -122,7 +123,12 @@ else:
 # Check for function calls
 if len(response.function_calls) > 0:
     for call in response.function_calls:
-        res_text += f"Calling function: {call.name}({call.args})"
+        function_call_result = call_function(call, args.verbose)
+        try:
+            if args.verbose:
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+        except Exception as e:
+            raise Exception(f"Fatal Error: {str(e)}")
 
 # Check for --verbose
 if args.verbose:
